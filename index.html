@@ -1,130 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fun Countries Explorer 🌍</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>World Countries Explorer — All Countries</title>
+  <meta name="description" content="All countries, grouped by continent. Search, sort, kid mode, dark mode." />
   <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --text: #222;
+      --muted: #667085;
+      --brand: #0ea5e9;
+      --chip: #e0f2fe;
+      --chip-text: #075985;
+      --border: rgba(0,0,0,.06);
+    }
+    .dark {
+      --bg: #0b0c10;
+      --card: #0f1117;
+      --text: #f5f7fb;
+      --muted: #a1a1aa;
+      --brand: #38bdf8;
+      --chip: rgba(56,189,248,.18);
+      --chip-text: #c9f1ff;
+      --border: rgba(255,255,255,.08);
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
-      background: #f5f5f5;
-      color: #222;
-      transition: background 0.3s, color 0.3s;
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
     }
     header {
-      text-align: center;
-      padding: 1rem;
-      background: #4CAF50;
-      color: white;
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(8px);
+      background: color-mix(in srgb, var(--bg) 85%, transparent);
+      border-bottom: 1px solid var(--border);
     }
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin: 10px;
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1 1 auto; }
+    h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
+    .controls { display: grid; grid-template-columns: 1fr minmax(160px, 220px) minmax(160px, 220px) auto auto; gap: 8px; margin-top: 8px; }
+    input, select, button {
+      appearance: none; border: 1px solid var(--border); background: var(--card); color: var(--text);
+      padding: 10px 12px; border-radius: 12px; outline: none;
     }
-    .controls input, .controls button {
-      padding: 8px 12px;
-      font-size: 14px;
-    }
-    #country-list {
+    button { cursor: pointer; }
+    main { padding: 20px 0 40px; }
+    section { margin: 24px 0; }
+    h2 { margin: 0 0 12px; font-size: 20px; }
+    .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 15px;
-      padding: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+      gap: 12px;
     }
-    .country-card {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.05);
+      transition: transform .12s ease, box-shadow .12s ease;
     }
-    .country-card:hover {
-      transform: scale(1.05);
-    }
-    .dark-mode {
-      background: #222;
-      color: #eee;
-    }
-    .dark-mode .country-card {
-      background: #333;
-      color: #eee;
-    }
-    .kids-mode {
-      font-family: "Comic Sans MS", cursive, sans-serif;
-      background: #fffae6;
-    }
-    .kids-mode header {
-      background: #ff9800;
-    }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+    .flag { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; }
+    .title { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; }
+    .title h3 { margin: 0; font-size: 16px; font-weight: 800; }
+    .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .chip { background: var(--chip); color: var(--chip-text); padding: 3px 8px; border-radius: 999px; font-size: 12px; }
+    .meta { font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+    .footer { text-align: center; color: var(--muted); padding: 22px 0; border-top: 1px solid var(--border); }
+    .kid .title h3 { font-size: 18px; }
+    .kid .meta, .kid input, .kid select, .kid button { font-size: 18px; }
+    .err { color: #b45309; padding: 8px 10px; border-radius: 10px; background: #fffbeb; border: 1px solid #fef3c7; }
+    .sr { position: absolute; left: -9999px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🌍 Fun Countries Explorer</h1>
-    <p>Search, explore, and learn about every country!</p>
+    <div class="wrap">
+      <div class="row">
+        <h1>🌍 World Countries Explorer</h1>
+        <div style="flex:1"></div>
+        <button id="darkBtn" title="Toggle dark mode">🌙 Dark</button>
+        <button id="kidBtn" title="Kid mode: bigger & playful">👶 Kid: OFF</button>
+      </div>
+      <div class="controls">
+        <input id="search" type="search" placeholder="Search by name, capital, or language…" />
+        <select id="continent">
+          <option value="all">All Continents</option>
+          <option value="Africa">Africa</option>
+          <option value="Americas">Americas</option>
+          <option value="Asia">Asia</option>
+          <option value="Europe">Europe</option>
+          <option value="Oceania">Oceania</option>
+          <option value="Antarctic">Antarctic</option>
+        </select>
+        <select id="sort">
+          <option value="name">Sort by Name</option>
+          <option value="population">Sort by Population</option>
+          <option value="area">Sort by Area</option>
+          <option value="density">Sort by Density</option>
+        </select>
+        <button id="clearBtn" title="Clear filters">Clear</button>
+        <button id="jumptoBtn" title="Jump to a random country">🎲 Random</button>
+      </div>
+      <div id="status" class="err" style="display:none"></div>
+    </div>
   </header>
 
-  <div class="controls">
-    <input type="text" id="search" placeholder="Search for a country...">
-    <button onclick="toggleDark()">🌙 Dark Mode</button>
-    <button onclick="toggleKids()">🎉 Kids Mode</button>
-  </div>
+  <main class="wrap" id="app">
+    <p class="muted">Loading all countries… passports being stamped ✈️</p>
+  </main>
 
-  <div id="country-list">Loading countries...</div>
+  <footer class="footer">
+    Built for kids & adults — fast, accessible, and a little silly. Tip: use <kbd>Ctrl/⌘+F</kbd> to find quickly.
+  </footer>
 
   <script>
-    let allCountries = [];
-    let isKids = false;
+    // Feature toggles
+    const darkBtn = document.getElementById('darkBtn');
+    const kidBtn = document.getElementById('kidBtn');
+    const statusEl = document.getElementById('status');
+    const app = document.getElementById('app');
+    const qs = sel => document.querySelector(sel);
 
-    async function loadCountries() {
-      try {
-        const response = await fetch("https://restcountries.com/v3.1/all");
-        allCountries = await response.json();
-        displayCountries(allCountries);
-      } catch (e) {
-        document.getElementById("country-list").innerHTML = "⚠️ Failed to load countries.";
-        console.error(e);
+    // Persisted settings
+    const persist = {
+      get(key, def){ try{ return JSON.parse(localStorage.getItem(key)) ?? def }catch{ return def } },
+      set(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)) }catch{} }
+    };
+
+    // Dark mode
+    const startDark = persist.get('wcx_dark', false);
+    if (startDark) document.body.classList.add('dark');
+    darkBtn.textContent = document.body.classList.contains('dark') ? '☀️ Light' : '🌙 Dark';
+    darkBtn.onclick = () => {
+      document.body.classList.toggle('dark');
+      darkBtn.textContent = document.body.classList.contains('dark') ? '☀️ Light' : '🌙 Dark';
+      persist.set('wcx_dark', document.body.classList.contains('dark'));
+    };
+
+    // Kid mode (bigger fonts, playful labels)
+    const kidLabels = on => {
+      qs('#sort option[value="name"]').textContent = on ? 'Sort by Name 🤹‍♂️' : 'Sort by Name';
+      qs('#sort option[value="population"]').textContent = on ? 'Sort by Population 🤹‍♂️' : 'Sort by Population';
+      qs('#sort option[value="area"]').textContent = on ? 'Sort by Area 🤹‍♂️' : 'Sort by Area';
+      qs('#sort option[value="density"]').textContent = on ? 'Sort by Density 🤹‍♂️' : 'Sort by Density';
+    };
+    const startKid = persist.get('wcx_kid', false);
+    if (startKid) { document.body.classList.add('kid'); kidBtn.textContent = '👶 Kid: ON'; kidLabels(true); }
+    kidBtn.onclick = () => {
+      const on = !document.body.classList.contains('kid');
+      document.body.classList.toggle('kid');
+      kidBtn.textContent = on ? '👶 Kid: ON' : '👶 Kid: OFF';
+      kidLabels(on);
+      persist.set('wcx_kid', on);
+    };
+
+    // Controls
+    const searchEl = document.getElementById('search');
+    const continentEl = document.getElementById('continent');
+    const sortEl = document.getElementById('sort');
+    const clearBtn = document.getElementById('clearBtn');
+    const jumptoBtn = document.getElementById('jumptoBtn');
+
+    clearBtn.onclick = () => { searchEl.value=''; continentEl.value='all'; sortEl.value='name'; render(); };
+    document.addEventListener('keydown', (e)=>{ if(e.key === '/') { e.preventDefault(); searchEl.focus(); } });
+
+    // Data holders
+    let ALL = []; // full dataset
+    let VIEW = []; // filtered/sorted
+    let SECTIONS = {}; // by region -> array
+
+    // Fetch from stable GitHub dataset (mledoze/countries)
+    // Using raw.githubusercontent.com works on GitHub Pages.
+    const SRC = 'https://raw.githubusercontent.com/mledoze/countries/master/dist/countries.json';
+
+    fetch(SRC)
+      .then(r => {
+        if (!r.ok) throw new Error('Network error '+r.status);
+        return r.json();
+      })
+      .then(json => {
+        // Map to needed fields; add safe defaults
+        ALL = json.map(c => {
+          const name = c.name?.common || c.name?.official || c.cca3 || 'Unknown';
+          const cca2 = (c.cca2 || '').toUpperCase();
+          const region = c.region || 'Other';
+          const subregion = c.subregion || '';
+          const capital = Array.isArray(c.capital) ? c.capital : (c.capital ? [c.capital] : []);
+          const population = c.population || 0;
+          const area = c.area || 0;
+          const languages = c.languages ? Object.values(c.languages) : [];
+          // Flag via FlagCDN using ISO code; fall back to emoji flag if cca2 missing
+          const flagPng = cca2 ? `https://flagcdn.com/w320/${cca2.toLowerCase()}.png` : '';
+          return { name, cca2, region, subregion, capital, population, area, languages, flagPng };
+        });
+        render();
+      })
+      .catch(err => {
+        statusEl.style.display = 'block';
+        statusEl.textContent = 'Failed to load countries data. Please check your connection or try again later.';
+        app.innerHTML = '<p class="err">Could not load the countries dataset.</p>';
+        console.error(err);
+      });
+
+    // Filter + sort + group
+    function computeView() {
+      const term = searchEl.value.trim().toLowerCase();
+      const regionPick = continentEl.value;
+      const sorter = sortEl.value;
+
+      VIEW = ALL.filter(c => {
+        if (regionPick !== 'all' && c.region !== regionPick) return false;
+        if (!term) return true;
+        const hay = [
+          c.name,
+          c.capital.join(', '),
+          c.languages.join(', ')
+        ].join(' • ').toLowerCase();
+        return hay.includes(term);
+      });
+
+      VIEW.sort((a,b) => {
+        if (sorter === 'name') return a.name.localeCompare(b.name);
+        if (sorter === 'population') return a.population - b.population;
+        if (sorter === 'area') return a.area - b.area;
+        if (sorter === 'density') {
+          const da = a.area ? a.population / a.area : 0;
+          const db = b.area ? b.population / b.area : 0;
+          return da - db;
+        }
+        return 0;
+      });
+
+      // group into sections
+      SECTIONS = {};
+      for (const c of VIEW) {
+        const key = c.region || 'Other';
+        (SECTIONS[key] ||= []).push(c);
       }
     }
 
-    function displayCountries(countries) {
-      const list = document.getElementById("country-list");
-      list.innerHTML = "";
-      countries.sort((a, b) => a.name.common.localeCompare(b.name.common));
-      countries.forEach(c => {
-        const item = document.createElement("div");
-        item.className = "country-card";
-        item.innerHTML = `
-          <img src="${c.flags.svg}" alt="Flag of ${c.name.common}" width="60"><br>
-          <strong>${c.name.common} ${isKids ? "🌟" : ""}</strong><br>
-          Capital: ${c.capital ? c.capital[0] : "N/A"}<br>
-          Region: ${c.region}<br>
-          Population: ${c.population.toLocaleString()}
-        `;
-        list.appendChild(item);
-      });
+    function fmt(n) {
+      return new Intl.NumberFormat().format(n);
     }
 
-    document.getElementById("search").addEventListener("input", e => {
-      const term = e.target.value.toLowerCase();
-      const filtered = allCountries.filter(c => c.name.common.toLowerCase().includes(term));
-      displayCountries(filtered);
+    function sillyFact(name) {
+      const bits = [
+        `If you stacked all its people, you'd get a very wobbly tower. Please don't.`,
+        `Home of amazing snacks. Scientists* confirm this. (*Hungry scientists)`,
+        `Its flag waves even on windless days (because… images).`,
+        `Population: many. Vibes: immaculate.`,
+        `Time is a social construct; timezones still exist here.`,
+        `Maps say it's here. Trust the maps.`,
+      ];
+      return `${name} fun fact: ${bits[Math.floor(Math.random()*bits.length)]}`;
+    }
+
+    function card(c) {
+      const density = c.area ? (c.population / c.area).toFixed(1) : '—';
+      const capital = c.capital.length ? c.capital.join(', ') : '—';
+      const langs = c.languages.length ? c.languages.join(', ') : '—';
+      return `
+        <article class="card" id="card-${c.cca2 || c.name.replace(/\\W+/g,'-')}">
+          <img class="flag" loading="lazy" src="${c.flagPng}" alt="Flag of ${c.name}">
+          <div class="title"><h3>${c.name}</h3><span class="chip" title="Region">${c.region}</span>${c.subregion?`<span class="chip" title="Subregion">${c.subregion}</span>`:''}</div>
+          <div class="meta">
+            <div><strong>${document.body.classList.contains('kid')?'Capital 🤹‍♂️':'Capital'}:</strong> ${capital}</div>
+            <div><strong>${document.body.classList.contains('kid')?'Population 🤹‍♂️':'Population'}:</strong> ${fmt(c.population)}</div>
+            <div><strong>${document.body.classList.contains('kid')?'Area 🤹‍♂️':'Area'}:</strong> ${fmt(c.area)} km²</div>
+            <div><strong>${document.body.classList.contains('kid')?'Density 🤹‍♂️':'Density'}:</strong> ${density} /km²</div>
+            <div><strong>${document.body.classList.contains('kid')?'Languages 🤹‍♂️':'Languages'}:</strong> ${langs}</div>
+          </div>
+          <div class="meta" style="margin-top:6px; font-style:italic;">${sillyFact(c.name)}</div>
+        </article>
+      `;
+    }
+
+    function render() {
+      computeView();
+      if (!VIEW.length) { app.innerHTML = '<p class="err">No countries match your filters.</p>'; return; }
+
+      const order = ['Africa','Americas','Asia','Europe','Oceania','Antarctic','Other'];
+      const parts = [];
+      for (const region of order) {
+        const arr = SECTIONS[region];
+        if (!arr || !arr.length) continue;
+        parts.push(`
+          <section id="${region.toLowerCase()}">
+            <h2>${icon(region)} ${region} <span class="chip">${arr.length}</span></h2>
+            <div class="grid">
+              ${arr.map(card).join('')}
+            </div>
+          </section>
+        `);
+      }
+      app.innerHTML = parts.join('\n');
+    }
+
+    function icon(region){
+      return ({
+        Africa:'🌍', Americas:'🌎', Asia:'🌏', Europe:'🏰', Oceania:'🌊', Antarctic:'❄️', Other:'🧭'
+      })[region] || '🧭';
+    }
+
+    // Wire up live controls
+    ['input','change'].forEach(evt => {
+      searchEl.addEventListener(evt, render);
+      continentEl.addEventListener(evt, render);
+      sortEl.addEventListener(evt, render);
     });
 
-    function toggleDark() {
-      document.body.classList.toggle("dark-mode");
-    }
-
-    function toggleKids() {
-      document.body.classList.toggle("kids-mode");
-      isKids = !isKids;
-      displayCountries(allCountries);
-    }
-
-    loadCountries();
+    // Jump to random card on screen after filters applied
+    jumptoBtn.onclick = () => {
+      const cards = app.querySelectorAll('.card');
+      if (!cards.length) return;
+      const pick = cards[Math.floor(Math.random()*cards.length)];
+      pick.scrollIntoView({behavior:'smooth', block:'center'});
+      pick.style.outline = '3px solid var(--brand)';
+      setTimeout(()=>{ pick.style.outline='none'; }, 900);
+    };
   </script>
 </body>
 </html>
