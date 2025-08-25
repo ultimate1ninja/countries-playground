@@ -2,352 +2,166 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Countries Playground — Single File</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <meta name="color-scheme" content="light dark" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>World Explorer 🌍</title>
   <style>
-    :root.dark .dark\:block { display: block; }
-    :root.dark .dark\:hidden { display: none; }
-    .backdrop { background: rgba(0,0,0,.6); }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f4f4f4;
+      color: #333;
+      transition: background 0.3s, color 0.3s;
+    }
+    header {
+      background: #4CAF50;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #search {
+      width: 250px;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .countries {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      padding: 1rem;
+    }
+    .country {
+      background: white;
+      padding: 1rem;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .country:hover {
+      transform: scale(1.02);
+    }
+    .country img {
+      width: 100%;
+      border-radius: 6px;
+      margin-bottom: 0.5rem;
+    }
+    /* Dark mode */
+    .dark {
+      background: #222;
+      color: #eee;
+    }
+    .dark .country {
+      background: #333;
+      color: #eee;
+    }
+    .dark header {
+      background: #111;
+    }
+    /* Kids mode */
+    .kids header {
+      background: #ff9800;
+      font-size: 1.5rem;
+    }
+    .kids .country {
+      background: #fff8dc;
+      border: 2px dashed #ff9800;
+    }
+    .kids .country h3 {
+      color: #d35400;
+    }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-b from-white to-blue-50 dark:from-neutral-950 dark:to-neutral-900 text-neutral-900 dark:text-neutral-100">
-  <div id="app">
-    <!-- Header -->
-    <header class="sticky top-0 z-40 backdrop-blur bg-white/70 dark:bg-neutral-950/70 border-b border-black/5 dark:border-white/10">
-      <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🌍</span>
-          <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight">Countries Playground</h1>
-          <span id="kidTag" class="ml-1 hidden">— giggles included 😄</span>
-        </div>
-        <div class="flex-1"></div>
-        <div class="flex items-center gap-2">
-          <button id="darkBtn" class="px-3 py-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 shadow">🌙 Dark</button>
-          <button id="kidBtn" class="px-3 py-1.5 rounded-2xl bg-amber-100 dark:bg-amber-900 shadow">👶 Kid: OFF</button>
-          <button id="quizBtn" class="px-3 py-1.5 rounded-2xl bg-green-100 dark:bg-green-900 shadow">🎯 Quiz</button>
-          <button id="randomBtn" class="px-3 py-1.5 rounded-2xl bg-blue-100 dark:bg-blue-900 shadow">🎲 Random</button>
-        </div>
-      </div>
-      <div class="max-w-7xl mx-auto px-4 pb-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <input id="search" placeholder="Search by name, capital, language" class="px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-neutral-800 w-full outline-none" />
-        <select id="region" class="px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-neutral-800 w-full"></select>
-        <select id="sort" class="px-3 py-2 rounded-2xl bg-neutral-100 dark:bg-neutral-800 w-full">
-          <option value="name">Sort by Name</option>
-          <option value="population">Sort by Population</option>
-          <option value="area">Sort by Area</option>
-          <option value="density">Sort by Density</option>
-        </select>
-      </div>
-    </header>
+<body>
+  <header>
+    <h1>🌍 World Explorer</h1>
+    <p>Learn about all countries — fun for kids & adults!</p>
+  </header>
 
-    <!-- Main grid -->
-    <main class="max-w-7xl mx-auto px-4 py-6">
-      <div id="loading" class="text-center py-10">Loading countries… packing tiny passports ✈️</div>
-      <div id="error" class="text-center mb-4 text-amber-700 dark:text-amber-400 hidden"></div>
-      <div id="grid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></div>
-      <div id="empty" class="text-center py-10 hidden">No countries found. Try a different search or region.</div>
-    </main>
-
-    <!-- Quiz Modal -->
-    <div id="quizModal" class="fixed inset-0 z-50 hidden items-center justify-center backdrop p-4">
-      <div class="bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl w-full max-w-xl p-6">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-xl font-bold">Flag Quiz — Round <span id="quizRound">1</span></h2>
-          <button id="quizClose" class="px-3 py-1 rounded-xl bg-neutral-200 dark:bg-neutral-800">Close</button>
-        </div>
-        <div class="text-sm opacity-80 mb-2">Score: <span id="quizScore">0</span></div>
-        <div class="flex flex-col items-center gap-3">
-          <img id="quizFlag" alt="Flag" class="w-56 h-36 object-contain rounded-xl border" />
-          <div id="quizChoices" class="grid grid-cols-2 gap-3 w-full"></div>
-          <div id="quizFeedback" class="h-6 text-center font-medium"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 hidden">
-      <div class="px-4 py-2 rounded-2xl bg-black text-white shadow-lg flex items-center gap-2">
-        <span id="toastText">⭐ Saved.</span>
-        <button id="toastDismiss" class="underline">Dismiss</button>
-      </div>
-    </div>
-
-    <footer class="max-w-7xl mx-auto px-4 py-6 text-center opacity-70">
-      Built for kids & adults — fast, accessible, and a little silly. Tip: hit <kbd>/</kbd> to search, <kbd>Q</kbd> for quiz.
-    </footer>
+  <div class="controls">
+    <input type="text" id="search" placeholder="Search for a country..." />
+    <button id="darkBtn">🌙 Dark Mode</button>
+    <button id="kidsBtn">🧒 Kids Mode</button>
   </div>
 
+  <main class="countries" id="countries"></main>
+
   <script>
-    // --- Minimal offline fallback ---
-    const FALLBACK = [
-      { name:{common:"Pakistan",official:"Islamic Republic of Pakistan"}, cca2:"PK", capital:["Islamabad"], region:"Asia", subregion:"Southern Asia", population:240485658, area:881912, timezones:["UTC+05:00"], flags:{svg:"https://flagcdn.com/pk.svg",png:"https://flagcdn.com/w320/pk.png",alt:"Flag of Pakistan"}, languages:{urd:"Urdu",eng:"English"}, currencies:{PKR:{name:"Pakistani rupee",symbol:"₨"}}, maps:{googleMaps:"https://goo.gl/maps/5LYujdfR4TiSsi2bA"}},
-      { name:{common:"Japan",official:"Japan"}, cca2:"JP", capital:["Tokyo"], region:"Asia", subregion:"Eastern Asia", population:125170000, area:377975, timezones:["UTC+09:00"], flags:{svg:"https://flagcdn.com/jp.svg",png:"https://flagcdn.com/w320/jp.png",alt:"Flag of Japan"}, languages:{jpn:"Japanese"}, currencies:{JPY:{name:"Japanese yen",symbol:"¥"}}, maps:{googleMaps:"https://goo.gl/maps/NGTLSCSrA8bMrvnX9"}},
-      { name:{common:"Brazil",official:"Federative Republic of Brazil"}, cca2:"BR", capital:["Brasília"], region:"Americas", subregion:"South America", population:203062512, area:8515767, timezones:["UTC−05:00","UTC−04:00","UTC−03:00","UTC−02:00"], flags:{svg:"https://flagcdn.com/br.svg",png:"https://flagcdn.com/w320/br.png",alt:"Flag of Brazil"}, languages:{por:"Portuguese"}, currencies:{BRL:{name:"Brazilian real",symbol:"R$"}}, maps:{googleMaps:"https://goo.gl/maps/waCKk21HeeqFzkNC9"}},
-      { name:{common:"Nigeria",official:"Federal Republic of Nigeria"}, cca2:"NG", capital:["Abuja"], region:"Africa", subregion:"Western Africa", population:223804632, area:923768, timezones:["UTC+01:00"], flags:{svg:"https://flagcdn.com/ng.svg",png:"https://flagcdn.com/w320/ng.png",alt:"Flag of Nigeria"}, languages:{eng:"English"}, currencies:{NGN:{name:"Nigerian naira",symbol:"₦"}}, maps:{googleMaps:"https://goo.gl/maps/Uz6w3ZLw2BgVB1jS6"}},
-      { name:{common:"Canada",official:"Canada"}, cca2:"CA", capital:["Ottawa"], region:"Americas", subregion:"North America", population:40578900, area:9984670, timezones:["UTC−08:00","UTC−07:00","UTC−06:00","UTC−05:00","UTC−04:00","UTC−03:30"], flags:{svg:"https://flagcdn.com/ca.svg",png:"https://flagcdn.com/w320/ca.png",alt:"Flag of Canada"}, languages:{eng:"English",fra:"French"}, currencies:{CAD:{name:"Canadian dollar",symbol:"$"}}, maps:{googleMaps:"https://goo.gl/maps/jmEVLugreeqiZXxbA"}},
-      { name:{common:"Australia",official:"Commonwealth of Australia"}, cca2:"AU", capital:["Canberra"], region:"Oceania", subregion:"Australia and New Zealand", population:26310700, area:7692024, timezones:["UTC+05:00","UTC+06:30","UTC+07:00","UTC+08:00","UTC+09:30","UTC+10:00","UTC+10:30","UTC+11:00"], flags:{svg:"https://flagcdn.com/au.svg",png:"https://flagcdn.com/w320/au.png",alt:"Flag of Australia"}, languages:{eng:"English"}, currencies:{AUD:{name:"Australian dollar",symbol:"$"}}, maps:{googleMaps:"https://goo.gl/maps/DcjaDa7UbhnZTndH6"}},
-      { name:{common:"Egypt",official:"Arab Republic of Egypt"}, cca2:"EG", capital:["Cairo"], region:"Africa", subregion:"Northern Africa", population:112716598, area:1002450, timezones:["UTC+02:00"], flags:{svg:"https://flagcdn.com/eg.svg",png:"https://flagcdn.com/w320/eg.png",alt:"Flag of Egypt"}, languages:{ara:"Arabic"}, currencies:{EGP:{name:"Egyptian pound",symbol:"E£"}}, maps:{googleMaps:"https://goo.gl/maps/uoFybmi3dR5xb9Rz8"}},
-      { name:{common:"Germany",official:"Federal Republic of Germany"}, cca2:"DE", capital:["Berlin"], region:"Europe", subregion:"Western Europe", population:84358845, area:357114, timezones:["UTC+01:00"], flags:{svg:"https://flagcdn.com/de.svg",png:"https://flagcdn.com/w320/de.png",alt:"Flag of Germany"}, languages:{deu:"German"}, currencies:{EUR:{name:"Euro",symbol:"€"}}, maps:{googleMaps:"https://goo.gl/maps/mD9FBMq1nvXUBrkv6"}},
-      { name:{common:"India",official:"Republic of India"}, cca2:"IN", capital:["New Delhi"], region:"Asia", subregion:"Southern Asia", population:1428627663, area:3287590, timezones:["UTC+05:30"], flags:{svg:"https://flagcdn.com/in.svg",png:"https://flagcdn.com/w320/in.png",alt:"Flag of India"}, languages:{hin:"Hindi",eng:"English"}, currencies:{INR:{name:"Indian rupee",symbol:"₹"}}, maps:{googleMaps:"https://goo.gl/maps/WSk3fLwG4vtPQetp7"}},
-      { name:{common:"United States",official:"United States of America"}, cca2:"US", capital:["Washington, D.C."], region:"Americas", subregion:"North America", population:334914895, area:9833520, timezones:["UTC−12:00","UTC−11:00","UTC−10:00","UTC−09:00","UTC−08:00","UTC−07:00","UTC−06:00","UTC−05:00","UTC−04:00","UTC+10:00","UTC+12:00"], flags:{svg:"https://flagcdn.com/us.svg",png:"https://flagcdn.com/w320/us.png",alt:"Flag of United States"}, languages:{eng:"English"}, currencies:{USD:{name:"United States dollar",symbol:"$"}}, maps:{googleMaps:"https://goo.gl/maps/e8M246zY4BSjkjAv6"}},
-      { name:{common:"France",official:"French Republic"}, cca2:"FR", capital:["Paris"], region:"Europe", subregion:"Western Europe", population:68708685, area:551695, timezones:["UTC−10:00","UTC−09:30","UTC−09:00","UTC−08:00","UTC−04:00","UTC−03:00","UTC+01:00","UTC+03:00","UTC+04:00","UTC+05:00","UTC+10:00","UTC+11:00","UTC+12:00"], flags:{svg:"https://flagcdn.com/fr.svg",png:"https://flagcdn.com/w320/fr.png",alt:"Flag of France"}, languages:{fra:"French"}, currencies:{EUR:{name:"Euro",symbol:"€"}}, maps:{googleMaps:"https://goo.gl/maps/g7QxxSFsWyTPKuzd7"}},
-      { name:{common:"China",official:"People's Republic of China"}, cca2:"CN", capital:["Beijing"], region:"Asia", subregion:"Eastern Asia", population:1411750000, area:9706961, timezones:["UTC+08:00"], flags:{svg:"https://flagcdn.com/cn.svg",png:"https://flagcdn.com/w320/cn.png",alt:"Flag of China"}, languages:{cmn:"Chinese"}, currencies:{CNY:{name:"Chinese yuan",symbol:"¥"}}, maps:{googleMaps:"https://goo.gl/maps/p9qC6vgiFRRXzvGi7"}}
-    ];
+    const countriesContainer = document.getElementById('countries');
+    const searchInput = document.getElementById('search');
+    const darkBtn = document.getElementById('darkBtn');
+    const kidsBtn = document.getElementById('kidsBtn');
 
-    const fmt = new Intl.NumberFormat();
-    const $ = (sel) => document.querySelector(sel);
-    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    let allCountries = [];
+    let kidsMode = false;
 
-    const state = {
-      data: [],
-      loading: true,
-      error: "",
-      q: "",
-      region: "all",
-      sort: "name",
-      kid: false,
-      dark: false,
-      randomId: "",
-      quiz: { round: 1, score: 0, answer: null, choices: [] },
-    };
-
-    function sillyFact(name) {
-      const bits = [
-        "If you stacked all its people, you'd get a very wobbly tower. Please don't.",
-        "Home of amazing snacks. Scientists* confirm this. (*Hungry scientists)",
-        "Its flag waves even on windless days (because… images).",
-        "Population: many. Vibes: immaculate.",
-        "Timezones exist here. Time is a social construct anyway.",
-        "Maps say it's here. Trust the maps.",
-      ];
-      return `${name} fun fact: ${bits[Math.floor(Math.random()*bits.length)]}`;
-    }
-
-    function speak(text) {
-      try {
-        const s = new SpeechSynthesisUtterance(text);
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(s);
-      } catch {}
-    }
-
-    function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
-
-    async function loadCountries() {
-      state.loading = true;
-      renderLoading();
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 9000);
-        const res = await fetch("https://restcountries.com/v3.1/all?fields=name,cca2,capital,region,subregion,population,area,timezones,flags,languages,currencies,maps", { signal: controller.signal });
-        clearTimeout(timer);
-        if (!res.ok) throw new Error("Network error");
-        state.data = await res.json();
-        state.error = "";
-      } catch (e) {
-        state.data = FALLBACK;
-        state.error = "Using offline sample. Live data unavailable.";
-      } finally {
-        state.loading = false;
-        populateRegions();
-        renderAll();
-      }
-    }
-
-    function populateRegions() {
-      const regions = Array.from(new Set(state.data.map(c => c.region).filter(Boolean))).sort();
-      const sel = $('#region');
-      sel.innerHTML = '';
-      const optAll = document.createElement('option');
-      optAll.value = 'all';
-      optAll.textContent = 'All Regions';
-      sel.appendChild(optAll);
-      regions.forEach(r => {
-        const o = document.createElement('option');
-        o.value = r; o.textContent = r; sel.appendChild(o);
+    // Fetch all countries
+    fetch('https://restcountries.com/v3.1/all')
+      .then(res => res.json())
+      .then(data => {
+        allCountries = data;
+        displayCountries(allCountries);
       });
-    }
 
-    function filteredAndSorted() {
-      let v = state.data;
-      if (state.region !== 'all') v = v.filter(c => c.region === state.region);
-      if (state.q.trim()) {
-        const t = state.q.toLowerCase();
-        v = v.filter(c =>
-          c.name.common.toLowerCase().includes(t) ||
-          ((c.capital||[]).join(', ').toLowerCase().includes(t)) ||
-          (c.languages ? Object.values(c.languages).join(', ').toLowerCase().includes(t) : false)
-        );
-      }
-      const cmp = {
-        name: (a,b) => a.name.common.localeCompare(b.name.common),
-        population: (a,b) => a.population - b.population,
-        area: (a,b) => a.area - b.area,
-        density: (a,b) => a.population/a.area - b.population/b.area,
-      }[state.sort];
-      return [...v].sort(cmp);
-    }
+    function displayCountries(countries) {
+      countriesContainer.innerHTML = '';
+      countries.forEach(c => {
+        const name = c.name.common;
+        const population = c.population.toLocaleString();
+        const region = c.region;
+        const flag = c.flags.svg;
+        let funnyFact = '';
 
-    function renderLoading() {
-      $('#loading').classList.toggle('hidden', !state.loading);
-    }
+        if (kidsMode) {
+          funnyFact = `😂 Did you know? ${name} has ${population} awesome people!`;
+        }
 
-    function renderError() {
-      const el = $('#error');
-      el.textContent = state.error;
-      el.classList.toggle('hidden', !state.error);
-    }
-
-    function renderGrid() {
-      const grid = $('#grid');
-      grid.innerHTML = '';
-      const view = filteredAndSorted();
-      $('#empty').classList.toggle('hidden', !(view.length === 0 && !state.loading));
-      view.forEach(c => {
-        const card = document.createElement('article');
-        card.id = `card-${c.cca2}`;
-        card.className = 'rounded-2xl bg-white dark:bg-neutral-950 border border-black/5 dark:border-white/10 shadow hover:shadow-lg transition overflow-hidden';
-        card.innerHTML = `
-          <div class="relative">
-            <img src="${c.flags.png || c.flags.svg}" alt="${c.flags.alt || `Flag of ${c.name.common}`}" class="w-full h-40 object-cover"/>
-            <div class="absolute top-2 left-2 flex gap-2">
-              <span class="px-2 py-1 rounded-xl bg-white/80 dark:bg-black/40 text-xs backdrop-blur">${c.region||''}</span>
-              ${c.subregion?`<span class="px-2 py-1 rounded-xl bg-white/80 dark:bg-black/40 text-xs backdrop-blur">${c.subregion}</span>`:''}
-            </div>
-          </div>
-          <div class="p-4 space-y-2">
-            <div class="flex items-center gap-2">
-              <h2 class="text-lg font-bold">${c.name.common}</h2>
-              <button data-say="${c.name.common}" title="Speak name" class="say px-2 py-1 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-sm">🔊</button>
-            </div>
-            <p class="text-sm opacity-80">${sillyFact(c.name.common)}</p>
-            <div class="grid grid-cols-2 gap-2 text-sm">
-              <div><span class="opacity-70">${label('Capital')}:</span> ${(c.capital||[]).join(', ')||'—'} ${c.capital?.[0]?'<button class="ml-1 say" data-say="'+c.capital[0]+'">🔊</button>':''}</div>
-              <div><span class="opacity-70">${label('Population')}:</span> ${fmt.format(c.population)}</div>
-              <div><span class="opacity-70">${label('Area')}:</span> ${fmt.format(c.area)} km²</div>
-              <div><span class="opacity-70">${label('Density')}:</span> ${c.area ? (c.population/c.area).toFixed(1) : '—'} /km²</div>
-              <div class="col-span-2"><span class="opacity-70">${label('Languages')}:</span> ${c.languages ? Object.values(c.languages).join(', ') : '—'}</div>
-              <div class="col-span-2"><span class="opacity-70">${label('Currencies')}:</span> ${c.currencies ? Object.entries(c.currencies).map(([k,v])=>`${v.name} (${k}${v.symbol? ' '+v.symbol:''})`).join(', ') : '—'}</div>
-              <div class="col-span-2"><span class="opacity-70">${label('Timezones')}:</span> ${(c.timezones||[]).join(', ')}</div>
-            </div>
-            <div class="pt-2 flex items-center gap-2">
-              ${c.maps?.googleMaps ? `<a href="${c.maps.googleMaps}" target="_blank" rel="noreferrer" class="px-3 py-1.5 rounded-xl bg-blue-100 dark:bg-blue-900">🗺️ Open in Maps</a>` : ''}
-              <button class="remember px-3 py-1.5 rounded-xl bg-purple-100 dark:bg-purple-900" data-id="${c.cca2}">⭐ Remember</button>
-            </div>
-          </div>
+        const countryCard = document.createElement('div');
+        countryCard.className = 'country';
+        countryCard.innerHTML = `
+          <img src="${flag}" alt="Flag of ${name}">
+          <h3>${kidsMode ? '🎉 ' : ''}${name}</h3>
+          <p><strong>Population:</strong> ${population}</p>
+          <p><strong>Region:</strong> ${region}</p>
+          ${kidsMode ? `<p>${funnyFact}</p>` : ''}
         `;
-        grid.appendChild(card);
+        countriesContainer.appendChild(countryCard);
       });
-
-      // Attach say/remember listeners
-      $$('.say').forEach(b => b.addEventListener('click', (e)=> speak(e.currentTarget.dataset.say)));
-      $$('.remember').forEach(b => b.addEventListener('click', (e)=> showToast(`⭐ Saved ${e.currentTarget.dataset.id}. Press R for another!`)));
     }
 
-    function label(text){ return state.kid ? `${text} 🤹‍♂️` : text; }
-
-    function renderAll(){
-      renderLoading();
-      renderError();
-      renderGrid();
-      $('#kidTag').classList.toggle('hidden', !state.kid);
-      document.documentElement.classList.toggle('dark', state.dark);
-      document.body.classList.toggle('text-lg', state.kid);
-      // Update control labels based on kid/dark
-      $('#kidBtn').textContent = state.kid ? '👶 Kid: ON' : '👶 Kid: OFF';
-      $('#darkBtn').textContent = state.dark ? '☀️ Light' : '🌙 Dark';
-      // Update placeholders with kid flair
-      $('#search').placeholder = state.kid ? 'Type a country… (pew pew)' : 'Search by name, capital, language';
-      // Update sort option labels
-      const sort = $('#sort');
-      sort.options[0].text = label('Sort by Name');
-      sort.options[1].text = label('Sort by Population');
-      sort.options[2].text = label('Sort by Area');
-      sort.options[3].text = label('Sort by Density');
-    }
-
-    function showToast(msg){
-      $('#toastText').textContent = msg;
-      $('#toast').classList.remove('hidden');
-    }
-
-    // --- Quiz ---
-    function startQuiz(){
-      const modal = $('#quizModal');
-      state.quiz = { round: 1, score: 0, answer: null, choices: [] };
-      nextQuizRound();
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function nextQuizRound(){
-      const pool = state.data;
-      const options = shuffle(pool).slice(0,4);
-      const answer = options[Math.floor(Math.random()*options.length)];
-      state.quiz.answer = answer; state.quiz.choices = options;
-      $('#quizRound').textContent = state.quiz.round;
-      $('#quizScore').textContent = state.quiz.score;
-      $('#quizFlag').src = answer.flags.png || answer.flags.svg;
-      $('#quizFlag').alt = answer.flags.alt || `Flag of ${answer.name.common}`;
-      const box = $('#quizChoices');
-      box.innerHTML = '';
-      options.forEach(c => {
-        const btn = document.createElement('button');
-        btn.className = 'px-3 py-2 rounded-xl bg-blue-100 dark:bg-blue-900 hover:scale-[1.02] transition';
-        btn.textContent = c.name.common;
-        btn.addEventListener('click', ()=> pickQuiz(c));
-        box.appendChild(btn);
-      });
-      $('#quizFeedback').textContent = '';
-    }
-
-    function pickQuiz(c){
-      const ok = c.cca2 === state.quiz.answer.cca2;
-      if (ok) state.quiz.score += 1;
-      $('#quizScore').textContent = state.quiz.score;
-      $('#quizFeedback').textContent = ok ? '✅ Correct!' : `❌ Oops! It was ${state.quiz.answer.name.common}.`;
-      setTimeout(()=>{ state.quiz.round += 1; nextQuizRound(); }, 900);
-    }
-
-    function closeQuiz(){
-      const modal = $('#quizModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-
-    // --- Events ---
-    $('#search').addEventListener('input', (e)=>{ state.q = e.target.value; renderAll(); });
-    $('#region').addEventListener('change', (e)=>{ state.region = e.target.value; renderAll(); });
-    $('#sort').addEventListener('change', (e)=>{ state.sort = e.target.value; renderAll(); });
-
-    $('#darkBtn').addEventListener('click', ()=>{ state.dark = !state.dark; renderAll(); });
-    $('#kidBtn').addEventListener('click', ()=>{ state.kid = !state.kid; renderAll(); });
-    $('#randomBtn').addEventListener('click', ()=>{
-      const view = filteredAndSorted();
-      if (!view.length) return;
-      const pick = view[Math.floor(Math.random()*view.length)];
-      const el = document.getElementById(`card-${pick.cca2}`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      showToast(`⭐ Saved ${pick.cca2}. Press R again to find another!`);
+    // Search filter
+    searchInput.addEventListener('input', (e) => {
+      const value = e.target.value.toLowerCase();
+      const filtered = allCountries.filter(c => 
+        c.name.common.toLowerCase().includes(value)
+      );
+      displayCountries(filtered);
     });
 
-    $('#quizBtn').addEventListener('click', startQuiz);
-    $('#quizClose').addEventListener('click', closeQuiz);
-    $('#toastDismiss').addEventListener('click', ()=> $('#toast').classList.add('hidden'));
-
-    // Keyboard shortcuts
-    window.addEventListener('keydown', (e)=>{
-      if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
-      if (e.key.toLowerCase() === 'r') $('#randomBtn').click();
-      if (e.key.toLowerCase() === 'q') startQuiz();
-      if (e.key.toLowerCase() === 'k') { state.kid = !state.kid; renderAll(); }
-      if (e.key.toLowerCase() === 'd') { state.dark = !state.dark; renderAll(); }
+    // Dark mode toggle
+    darkBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
     });
 
-    // Kickoff
-    loadCountries();
+    // Kids mode toggle
+    kidsBtn.addEventListener('click', () => {
+      kidsMode = !kidsMode;
+      document.body.classList.toggle('kids', kidsMode);
+      displayCountries(allCountries);
+    });
   </script>
 </body>
 </html>
