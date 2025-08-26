@@ -172,7 +172,6 @@
     let SECTIONS = {}; // by region -> array
 
     // Fetch from stable GitHub dataset (mledoze/countries)
-    // Using raw.githubusercontent.com works on GitHub Pages.
     const SRC = 'https://raw.githubusercontent.com/mledoze/countries/master/dist/countries.json';
 
     fetch(SRC)
@@ -191,10 +190,29 @@
           const population = c.population || 0;
           const area = c.area || 0;
           const languages = c.languages ? Object.values(c.languages) : [];
-          // Flag via FlagCDN using ISO code; fall back to emoji flag if cca2 missing
           const flagPng = cca2 ? `https://flagcdn.com/w320/${cca2.toLowerCase()}.png` : '';
           return { name, cca2, region, subregion, capital, population, area, languages, flagPng };
         });
+
+        // ❌ Remove countries Pakistan does not recognize
+        const PK_UNRECOGNIZED = ["Israel", "Armenia", "Taiwan"];
+        ALL = ALL.filter(c => !PK_UNRECOGNIZED.includes(c.name));
+
+        // ✅ Ensure Western Sahara is included
+        if (!ALL.some(c => c.name === "Western Sahara")) {
+          ALL.push({
+            name: "Western Sahara",
+            cca2: "EH",
+            region: "Africa",
+            subregion: "Northern Africa",
+            capital: ["Laayoune"],
+            population: 652271,
+            area: 266000,
+            languages: ["Arabic"],
+            flagPng: "https://flagcdn.com/w320/eh.png"
+          });
+        }
+
         render();
       })
       .catch(err => {
@@ -233,7 +251,6 @@
         return 0;
       });
 
-      // group into sections
       SECTIONS = {};
       for (const c of VIEW) {
         const key = c.region || 'Other';
@@ -304,14 +321,12 @@
       })[region] || '🧭';
     }
 
-    // Wire up live controls
     ['input','change'].forEach(evt => {
       searchEl.addEventListener(evt, render);
       continentEl.addEventListener(evt, render);
       sortEl.addEventListener(evt, render);
     });
 
-    // Jump to random card on screen after filters applied
     jumptoBtn.onclick = () => {
       const cards = app.querySelectorAll('.card');
       if (!cards.length) return;
