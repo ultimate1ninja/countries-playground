@@ -1,88 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>World Countries Explorer</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
       margin: 0;
-      padding: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f8f8;
+      color: #333;
     }
     header {
-      background: #333;
-      color: white;
-      padding: 15px;
-      text-align: center;
+      position: sticky;
+      top: 0;
+      background: #222;
+      color: #fff;
+      padding: 10px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
     }
-    .container {
+    .controls {
+      display: flex;
+      gap: 10px;
+    }
+    .controls input, .controls select, .controls button {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: none;
+    }
+    .dark body {
+      background: #111;
+      color: #eee;
+    }
+    .region {
+      margin: 20px;
+    }
+    h2 {
+      border-bottom: 2px solid #ccc;
+      padding-bottom: 5px;
+    }
+    .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 15px;
-      padding: 20px;
     }
     .card {
-      background: white;
-      border-radius: 10px;
-      padding: 15px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      transition: 0.3s;
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .card:hover {
-      transform: scale(1.05);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: translateY(-4px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.2);
     }
-    .card img {
+    .flag {
       width: 100%;
-      height: 120px;
+      height: 100px;
       object-fit: cover;
       border-radius: 8px;
     }
-    .card h3 {
-      margin: 10px 0 5px;
+    .meta {
+      font-size: 0.9em;
+      margin-top: 6px;
+      font-style: italic;
     }
-    .card p {
-      margin: 4px 0;
-      font-size: 14px;
+    .kid-mode .card {
+      background: #fffae6;
+      border: 2px solid #ffcc00;
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>🌍 World Countries Explorer</h1>
-    <p>Population data + unique fun facts for every country</p>
+    <h1>World Countries Explorer</h1>
+    <div class="controls">
+      <input type="text" id="search" placeholder="Search country...">
+      <select id="sort">
+        <option value="name">Sort by Name</option>
+        <option value="population">Sort by Population</option>
+      </select>
+      <button id="toggleDark">Dark Mode</button>
+      <button id="toggleKid">Kid Mode</button>
+    </div>
   </header>
+  <main id="content"></main>
 
-  <div class="container" id="countries"></div>
-
+  <!-- facts file -->
   <script src="facts.js"></script>
   <script>
+    const regions = {
+      "Africa": 59,
+      "Americas": 56,
+      "Asia": 51,
+      "Europe": 46,
+      "Oceania": 16,
+      "Antarctic": 1
+    };
+
     async function loadCountries() {
       const res = await fetch("https://restcountries.com/v3.1/all");
-      const data = await res.json();
+      let countries = await res.json();
 
-      const container = document.getElementById("countries");
-      container.innerHTML = "";
+      countries.sort((a, b) => a.name.common.localeCompare(b.name.common));
+      render(countries);
 
-      data.sort((a, b) => a.name.common.localeCompare(b.name.common));
-
-      data.forEach(c => {
-        const fact = countryFacts[c.name.common] || "No fact available yet.";
-        const population = c.population ? c.population.toLocaleString() : "Unknown";
-
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-          <img src="${c.flags.png}" alt="Flag of ${c.name.common}">
-          <h3>${c.name.common}</h3>
-          <p><b>Capital:</b> ${c.capital ? c.capital[0] : "N/A"}</p>
-          <p><b>Population:</b> ${population}</p>
-          <p><b>Region:</b> ${c.region}</p>
-          <p><b>Fun Fact:</b> ${fact}</p>
-        `;
-        container.appendChild(card);
+      document.getElementById("search").addEventListener("input", e => {
+        const term = e.target.value.toLowerCase();
+        render(countries.filter(c => c.name.common.toLowerCase().includes(term)));
       });
+
+      document.getElementById("sort").addEventListener("change", e => {
+        if (e.target.value === "population") {
+          countries.sort((a, b) => b.population - a.population);
+        } else {
+          countries.sort((a, b) => a.name.common.localeCompare(b.name.common));
+        }
+        render(countries);
+      });
+
+      document.getElementById("toggleDark").onclick = () => {
+        document.body.classList.toggle("dark");
+      };
+      document.getElementById("toggleKid").onclick = () => {
+        document.body.classList.toggle("kid-mode");
+      };
+    }
+
+    function render(list) {
+      const grouped = {};
+      list.forEach(c => {
+        const region = c.region || "Other";
+        if (!grouped[region]) grouped[region] = [];
+        grouped[region].push(c);
+      });
+
+      const content = document.getElementById("content");
+      content.innerHTML = "";
+      for (const region in grouped) {
+        const sec = document.createElement("section");
+        sec.className = "region";
+        sec.innerHTML = `<h2>${region}</h2>`;
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        grouped[region].forEach(c => {
+          const fact = countryFacts[c.name.common] || "No fact available yet.";
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <img class="flag" src="${c.flags.svg}" alt="${c.name.common} flag">
+            <h3>${c.name.common}</h3>
+            <p>Population: ${c.population.toLocaleString()}</p>
+            <p>Capital: ${c.capital ? c.capital[0] : "N/A"}</p>
+            <div class="meta">Fun Fact: ${fact}</div>
+          `;
+          grid.appendChild(card);
+        });
+        sec.appendChild(grid);
+        content.appendChild(sec);
+      }
     }
 
     loadCountries();
