@@ -29,7 +29,7 @@
     * { box-sizing: border-box; }
     body {
       margin: 0; background: var(--bg); color: var(--text);
-      font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
     }
     header {
       position: sticky; top: 0; z-index: 20;
@@ -61,7 +61,7 @@
       transition: transform .12s ease, box-shadow .12s ease;
     }
     .card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
-    .flag { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; }
+    .flag { width: 100%; height: 120px; object-fit: cover; border-radius: 10px; background: linear-gradient(90deg,#eee,#f7f7f7); }
     .title { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; }
     .title h3 { margin: 0; font-size: 16px; font-weight: 800; }
     .chip { background: var(--chip); color: var(--chip-text); padding: 3px 8px; border-radius: 999px; font-size: 12px; }
@@ -71,6 +71,7 @@
     .kid .meta, .kid input, .kid select, .kid button { font-size: 18px; }
     .err { color: #b45309; padding: 8px 10px; border-radius: 10px; background: #fffbeb; border: 1px solid #fef3c7; }
     .sr { position: absolute; left: -9999px; }
+    .muted { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -166,11 +167,11 @@
     document.addEventListener('keydown', (e)=>{ if(e.key === '/') { e.preventDefault(); searchEl.focus(); } });
 
     // Data holders
-    let ALL = []; // full dataset (after filters)
+    let ALL = []; // full dataset
     let VIEW = []; // filtered/sorted
     let SECTIONS = {}; // by region -> array
 
-    // Fetch from stable GitHub dataset (mledoze/countries)
+    // Fetch source: mledoze countries dataset (stable)
     const SRC = 'https://raw.githubusercontent.com/mledoze/countries/master/dist/countries.json';
 
     fetch(SRC)
@@ -179,9 +180,10 @@
         return r.json();
       })
       .then(json => {
-        // Map to needed fields; add safe defaults
+        // Map to needed fields; add safe defaults and ensure population is read
         const raw = json.map(c => {
-          const name = c.name?.common || c.name?.official || c.cca3 || 'Unknown';
+          // mledoze format: c.name.common (or c.name) — handle both
+          const name = (c.name && (c.name.common || c.name.official)) || c.cca3 || 'Unknown';
           const cca2 = (c.cca2 || '').toUpperCase();
           const region = c.region || 'Other';
           const subregion = c.subregion || '';
@@ -194,16 +196,15 @@
           const landlocked = !!c.landlocked;
           const unMember = !!c.unMember;
           const latlng = Array.isArray(c.latlng) ? c.latlng : [];
-          // Flag via FlagCDN using ISO code; fall back to empty if cca2 missing
           const flagPng = cca2 ? `https://flagcdn.com/w320/${cca2.toLowerCase()}.png` : '';
           return { name, cca2, region, subregion, capital, population, area, languages, timezones, borders, landlocked, unMember, latlng, flagPng };
         });
 
-        // Pakistan recognition filter: remove specific entries
+        // Pakistan recognition filter: hide these names (per your earlier request)
         const PK_BLOCK = new Set(["Israel","Armenia","Taiwan"]);
         ALL = raw.filter(c => !PK_BLOCK.has(c.name));
 
-        // Ensure Western Sahara appears (if dataset includes it as "Western Sahara" keep as-is; if not, add a minimal card)
+        // Ensure Western Sahara appears (if absent)
         if (!ALL.some(c => c.name === "Western Sahara")) {
           ALL.push({
             name: "Western Sahara",
@@ -223,6 +224,8 @@
           });
         }
 
+        // Sort default by name for consistent initial view
+        ALL.sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
         render();
       })
       .catch(err => {
@@ -238,73 +241,73 @@
       try { return new Intl.NumberFormat().format(n); } catch { return String(n); }
     }
 
-    // Build a country-specific, real fact using attributes so every country gets a unique line.
+    // Build a country-specific fact using its attributes (ensures unique-ish facts)
     function makeFact(c){
-      const bits = [];
+      const parts = [];
 
-      // Island / landlocked / borders
-      if (c.landlocked) {
-        bits.push('It is landlocked with no coastline.');
-      } else if (c.borders.length === 0 && c.area && c.area < 1000000) {
-        bits.push('It is an island nation.');
-      } else if (c.borders.length > 0) {
-        bits.push(`It shares borders with ${c.borders.length} ${c.borders.length===1?'country':'countries'}.`);
+      // Borders/Island/landlocked
+      if (c.landlocked) parts.push('This country is landlocked (no coastline).');
+      else if (c.borders.length === 0) {
+        // probably island or remote territory
+        parts.push('This country has no land borders — it is an island or isolated by sea.');
+      } else {
+        parts.push(`It shares land borders with ${c.borders.length} ${c.borders.length===1 ? 'country' : 'countries'}.`);
       }
 
-      // UN membership
-      if (c.unMember === false) bits.push('It is not a member of the United Nations.');
+      // UN membership mention
+      if (c.unMember === false) parts.push('It is not a member of the United Nations.');
 
       // Languages
       if (c.languages && c.languages.length) {
-        if (c.languages.length === 1) bits.push(`It lists ${c.languages[0]} as a primary language.`);
-        else bits.push(`It recognizes ${c.languages.length} languages (${c.languages.slice(0,3).join(', ')}${c.languages.length>3?', …':''}).`);
+        if (c.languages.length === 1) parts.push(`The primary language listed is ${c.languages[0]}.`);
+        else {
+          const sample = c.languages.slice(0,3).join(', ');
+          parts.push(`It officially lists ${c.languages.length} languages (e.g. ${sample}${c.languages.length>3?', …':''}).`);
+        }
       }
 
-      // Capital(s)
+      // Capital
       if (c.capital && c.capital.length) {
-        if (c.capital.length === 1) bits.push(`Its capital is ${c.capital[0]}.`);
-        else bits.push(`It has multiple capitals: ${c.capital.join(', ')}.`);
+        parts.push(`Its capital is ${c.capital.join(', ')}.`);
       } else {
-        bits.push('It has no official capital.');
+        parts.push('No official capital is listed.');
       }
 
       // Time zones
-      if (c.timezones && c.timezones.length > 1) {
-        bits.push(`It spans ${c.timezones.length} time zones.`);
-      }
+      if (c.timezones && c.timezones.length > 1) parts.push(`It spans ${c.timezones.length} time zones.`);
 
-      // Area & population derived tidbits
+      // Area / population derived statement
       if (c.area && c.population) {
-        const density = c.population / c.area; // ppl per km²
-        let dClass = '';
-        if (density < 25) dClass = 'sparsely populated';
-        else if (density < 150) dClass = 'moderately dense';
-        else dClass = 'densely populated';
-        bits.push(`With a density around ${Math.round(density)} people/km², it is ${dClass}.`);
+        const density = c.population / c.area;
+        let densityText = '';
+        if (density < 25) densityText = 'sparsely populated';
+        else if (density < 150) densityText = 'moderately populated';
+        else densityText = 'densely populated';
+        parts.push(`With about ${Math.round(density)} people per km², it is ${densityText}.`);
       } else if (c.area) {
-        if (c.area > 2000000) bits.push('It ranks among the largest countries by area.');
-        else if (c.area < 1000) bits.push('It is among the smallest countries by area.');
+        if (c.area > 2000000) parts.push('It is among the largest countries by land area.');
+        else if (c.area < 1000) parts.push('It is among the smallest countries by land area.');
       } else if (c.population) {
-        if (c.population > 100_000_000) bits.push('It is one of the world’s most populous countries.');
-        else if (c.population < 100_000) bits.push('Its population is under 100,000.');
+        if (c.population > 100_000_000) parts.push('It is one of the world’s most populous countries.');
+        else if (c.population < 100_000) parts.push('It has a population under 100,000.');
       }
 
-      // Hemisphere hint from lat/lng
+      // Hemisphere
       if (Array.isArray(c.latlng) && c.latlng.length === 2) {
         const [lat, lng] = c.latlng;
         const hemiNS = lat >= 0 ? 'Northern' : 'Southern';
         const hemiEW = lng >= 0 ? 'Eastern' : 'Western';
-        bits.push(`It lies in the ${hemiNS} & ${hemiEW} Hemispheres.`);
+        parts.push(`Located in the ${hemiNS} & ${hemiEW} Hemispheres.`);
       }
 
-      // Region/subregion flavor
-      if (c.subregion) bits.push(`Part of the ${c.subregion} subregion in ${c.region}.`);
-      else if (c.region) bits.push(`Located in ${c.region}.`);
+      // Region/subregion
+      if (c.subregion) parts.push(`Part of the ${c.subregion} subregion in ${c.region}.`);
+      else if (c.region) parts.push(`Located in ${c.region}.`);
 
-      // Ensure at least 2–3 short sentences and keep it readable
+      // pick up to 3 unique parts to keep it concise
       const unique = [];
-      for (const b of bits) {
-        if (!unique.includes(b)) unique.push(b);
+      for (const p of parts) {
+        if (!unique.includes(p)) unique.push(p);
         if (unique.length >= 3) break;
       }
       return unique.join(' ');
@@ -360,7 +363,7 @@
       const fact = makeFact(c);
       return `
         <article class="card" id="card-${c.cca2 || c.name.replace(/\\W+/g,'-')}">
-          <img class="flag" loading="lazy" src="${c.flagPng}" alt="Flag of ${c.name}">
+          <img class="flag" loading="lazy" src="${c.flagPng}" alt="Flag of ${c.name}" onerror="this.style.opacity=.4">
           <div class="title"><h3>${c.name}</h3><span class="chip" title="Region">${c.region}</span>${c.subregion?`<span class="chip" title="Subregion">${c.subregion}</span>`:''}</div>
           <div class="meta">
             <div><strong>${document.body.classList.contains('kid')?'Capital 🤹‍♂️':'Capital'}:</strong> ${capital}</div>
